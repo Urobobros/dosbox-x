@@ -825,6 +825,9 @@
     <ClCompile Include="..\src\debug\debug_win32.cpp">
       <Filter>Sources\debug</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\debug\gdbserver.cpp">
+      <Filter>Sources\debug</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\dosbox.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
@@ -2406,6 +2409,9 @@
       <Filter>Includes</Filter>
     </ClInclude>
     <ClInclude Include="..\include\fpu_control_x86.h">
+      <Filter>Includes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\gdbserver.h">
       <Filter>Includes</Filter>
     </ClInclude>
     <ClInclude Include="..\include\iconvpp.hpp">
