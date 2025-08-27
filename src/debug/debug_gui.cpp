@@ -107,6 +107,14 @@ static list<string>::iterator logBuffPos = logBuff.end();
 
 extern int old_cursor_state;
 
+static void BlitAllWindow(void) {
+    if (dbg.win_all && dbg.win_main) {
+        int maxy,maxx; getmaxyx(dbg.win_main,maxy,maxx);
+        copywin(dbg.win_main, dbg.win_all, 0,0,0,0,maxy-1,maxx-1,0);
+        wrefresh(dbg.win_all);
+    }
+}
+
 void getlogtext(std::string &str) {
     str = "";
     std::list<string>::iterator it;
@@ -337,7 +345,8 @@ void DEBUG_RefreshPage(char scroll) {
         }
     }
 
-	wrefresh(dbg.win_out);
+    wrefresh(dbg.win_out);
+    BlitAllWindow();
 }
 
 void DEBUG_ScrollHomeOutput(void) {
@@ -441,6 +450,11 @@ static void DestroySubWindows(void) {
             ref = NULL;
         }
     }
+
+    if (dbg.win_all) {
+        delwin(dbg.win_all);
+        dbg.win_all = NULL;
+    }
 }
 
 void DEBUG_GUI_DestroySubWindows(void) {
@@ -531,9 +545,13 @@ static void MakeSubWindows(void) {
         outy += height;
     }
 
-	DrawBars();
-	Draw_RegisterLayout();
-	refresh();
+    if (!dbg.win_all)
+        dbg.win_all = newwin(win_main_maxy, win_main_maxx, 0, 0);
+
+    DrawBars();
+    Draw_RegisterLayout();
+    refresh();
+    BlitAllWindow();
 }
 
 void DEBUG_GUI_Rebuild(void) {
