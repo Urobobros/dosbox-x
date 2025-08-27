@@ -150,6 +150,11 @@ std::string GDBServer::receive_packet() {
             return "";
         }
         if (c == '$') break;
+        if (c == '\x03') {
+            DEBUG_EnableDebugger();
+            signal_breakpoint();
+            continue;
+        }
     }
 
     // Read the packet content
