@@ -30,6 +30,7 @@
 #include <iomanip>
 #include <string>
 #include <sstream>
+#include <thread>
 using namespace std;
 
 #include "debug.h"
@@ -43,6 +44,7 @@ using namespace std;
 #include "mapper.h"
 #include "pc98_gdc.h"
 #include "callback.h"
+#include "gdbserver.h"
 #include "inout.h"
 #include "paging.h"
 #include "shell.h"
@@ -169,6 +171,8 @@ static void OutputVecTable(char* filename);
 static void DrawVariables(void);
 static void LogDOSKernMem(void);
 static void LogBIOSMem(void);
+
+static GDBServer* gdbServer;
 
 extern int debuggerrun;
 int debugrunmode=0;
@@ -3999,11 +4003,10 @@ int32_t DEBUG_Run(int32_t amount,bool quickexit) {
 	return ret;
 }
 
-uint32_t DEBUG_CheckKeys(void) {
+uint32_t DEBUG_CheckKeys(int key) {
 	Bits ret=0;
 	bool numberrun = false;
 	bool skipDraw = false;
-	int key=getch();
 
     if (key == KEY_RESIZE) {
 #ifdef WIN32 /* BUG: pdcurses notifies us immediately upon getting a resize event but does not update it's
@@ -4505,7 +4508,7 @@ Bitu DEBUG_Loop(void) {
             DEBUG_RefreshPage(0);
         }
 
-    	return DEBUG_CheckKeys();
+    	return DEBUG_CheckKeys(getch());
     }
 }
 
@@ -4591,6 +4594,11 @@ void DEBUG_Enable_Handler(bool pressed) {
 
     LoopHandler *ol = DOSBOX_GetLoop();
     if (ol != DEBUG_Loop) old_loop = ol;
+
+    if (!debugging) {
+        printf("Breakpoint hit! Entering debugger.\n");
+        gdbServer->signal_breakpoint();
+    }
 
     debugging=true;
     debug_running=false;
@@ -5321,6 +5329,7 @@ void DEBUG_ReinitCallback(void) {
 
 void DEBUG_Init() {
     LOG(LOG_MISC, LOG_DEBUG)("Initializing debug system");
+    DEBUG_InitGDBStub(2159);
 
 	/* Reset code overview and input line */
 	memset((void*)&codeViewData,0,sizeof(codeViewData));
@@ -5712,6 +5721,109 @@ void DEBUG_StopLog(void) {
 }
 
 #endif // HEAVY DEBUG
+
+uint32_t DEBUG_GetRegister(int reg) {
+    switch(reg) {
+        case 0: return reg_eax;
+        case 1: return reg_ecx;
+        case 2: return reg_edx;
+        case 3: return reg_ebx;
+        case 4: return reg_esp;
+        case 5: return reg_ebp;
+        case 6: return reg_esi;
+        case 7: return reg_edi;
+        case 8: return SegPhys(cs)+reg_eip;
+        case 9: return reg_flags;
+        case 10: return SegValue(cs);
+        case 11: return SegValue(ss);
+        case 12: return SegValue(ds);
+        case 13: return SegValue(es);
+        case 14: return SegValue(fs);
+        case 15: return SegValue(gs);
+        default: return 0;
+    }
+}
+
+void DEBUG_SetRegister(int reg, uint32_t value) {
+    switch(reg) {
+        case 0: reg_eax = value; break;
+        case 1: reg_ecx = value; break;
+        case 2: reg_edx = value; break;
+        case 3: reg_ebx = value; break;
+        case 4: reg_esp = value; break;
+        case 5: reg_ebp = value; break;
+        case 6: reg_esi = value; break;
+        case 7: reg_edi = value; break;
+        case 8: reg_eip = value; break;
+        case 9: reg_flags = value; break;
+        case 10: SegSet16(cs, value); break;
+        case 11: SegSet16(ss, value); break;
+        case 12: SegSet16(ds, value); break;
+        case 13: SegSet16(es, value); break;
+        case 14: SegSet16(fs, value); break;
+        case 15: SegSet16(gs, value); break;
+    }
+}
+
+uint8_t DEBUG_ReadMemory(uint32_t address) {
+    uint8_t value;
+    if (mem_readb_checked(address, &value)) {
+        // Memory read failed
+        return 0;
+    }
+    return value;
+}
+
+void DEBUG_WriteMemory(uint32_t address, uint8_t value) {
+    mem_writeb_checked(address, value);
+}
+
+void DEBUG_Step() {
+    DEBUG_CheckKeys(KEY_F(11));
+    gdbServer->signal_breakpoint();
+    return;
+}
+
+void DEBUG_Continue() {
+    DEBUG_CheckKeys(KEY_F(5));
+    return;
+
+
+    exitLoop = false;
+    debugging = false;
+    CBreakpoint::ActivateBreakpoints();
+    DOSBOX_SetNormalLoop();
+    return;
+}
+
+#define FP_SEG(x) (uint16_t)((uint32_t)(x) >> 16)
+#define FP_OFF(x) (uint16_t)((uint32_t)(x))
+bool DEBUG_SetBreakpoint(uint32_t address) {
+    uint16_t seg = FP_SEG(address);
+    uint16_t off = FP_OFF(address);
+    DEBUG_ShowMsg("Adding Breakpoint %x:%x", seg, off);
+    return CBreakpoint::AddBreakpoint(seg, off, false);
+}
+
+bool DEBUG_RemoveBreakpoint(uint32_t address) {
+    uint16_t seg = address >> 16;
+    uint16_t off = address;
+    DEBUG_ShowMsg("Removing Breakpoint %x:%x", seg, off);
+    return CBreakpoint::DeleteBreakpoint(seg, off);
+}
+
+// Add this function to handle GDB server initialization
+void DEBUG_InitGDBStub(int port) {
+    // This function should be called from dosbox.cpp when the -gdb option is used
+    gdbServer = new GDBServer(port);
+
+    // Run the GDB server in a separate thread
+    std::thread gdbThread([gdbServer]() {
+        gdbServer->run();
+    });
+
+    gdbThread.detach();  // Let the thread run independently
+}
 
 
 #endif // DEBUG
