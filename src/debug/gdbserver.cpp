@@ -22,12 +22,22 @@ std::string get_next_async_event() {
 
 void GDBServer::run() {
     DEBUG_ShowMsg("GDBServer: Starting...");
+#ifdef _WIN32
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
+        DEBUG_ShowMsg("GDBServer: WSAStartup failed");
+        return;
+    }
+#endif
     setup_socket();
 
     while (true) {
         wait_for_client();
         handle_client();
     }
+#ifdef _WIN32
+    WSACleanup();
+#endif
 }
 
 void GDBServer::setup_socket() {
@@ -39,10 +49,17 @@ void GDBServer::setup_socket() {
         exit(EXIT_FAILURE);
     }
 
+#ifdef _WIN32
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt))) {
+        DEBUG_ShowMsg("GDBServer: setsockopt");
+        exit(EXIT_FAILURE);
+    }
+#else
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
         DEBUG_ShowMsg("GDBServer: setsockopt");
         exit(EXIT_FAILURE);
     }
+#endif
 
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
@@ -79,7 +96,7 @@ void GDBServer::handle_client() {
     // Perform initial handshake
     if (!perform_handshake()) {
         DEBUG_ShowMsg("Handshake failed");
-        close(client_fd);
+        CLOSESOCKET(client_fd);
         return;
     }
 
@@ -97,7 +114,7 @@ void GDBServer::handle_client() {
     }
 
     DEBUG_ShowMsg("GDBServer: closing client");
-    close(client_fd);
+    CLOSESOCKET(client_fd);
 }
 
 bool GDBServer::perform_handshake() {
@@ -128,7 +145,7 @@ std::string GDBServer::receive_packet() {
 
     // Wait for the start of the packet
     while (true) {
-        if (read(client_fd, &c, 1) <= 0) {
+        if (SOCKET_READ(client_fd, &c, 1) <= 0) {
             DEBUG_ShowMsg("GDBServer: Error reading from client or client disconnected");
             return "";
         }
@@ -137,7 +154,7 @@ std::string GDBServer::receive_packet() {
 
     // Read the packet content
     while (true) {
-        if (read(client_fd, &c, 1) <= 0) {
+        if (SOCKET_READ(client_fd, &c, 1) <= 0) {
             DEBUG_ShowMsg("GDBServer: Error reading packet content");
             return "";
         }
@@ -147,7 +164,7 @@ std::string GDBServer::receive_packet() {
 
     // Read the checksum
     char checksum[2];
-    if (read(client_fd, checksum, 2) <= 0) {
+    if (SOCKET_READ(client_fd, checksum, 2) <= 0) {
         DEBUG_ShowMsg("GDBServer: Error reading checksum");
         return "";
     }
@@ -162,14 +179,14 @@ std::string GDBServer::receive_packet() {
     if (received_checksum != calculated_checksum) {
         DEBUG_ShowMsg("GDBServer: Checksum mismatch! received 0x%02x, calculated 0x%02x", received_checksum, calculated_checksum);
         if (!noack_mode) {
-            write(client_fd, "-", 1);
+            SOCKET_WRITE(client_fd, "-", 1);
         }
         return "";
     }
 
     // Send acknowledgment if not in no-ack mode
     if (!noack_mode) {
-        write(client_fd, "+", 1);
+        SOCKET_WRITE(client_fd, "+", 1);
     }
 
     DEBUG_ShowMsg("GDBServer: << %s", packet.c_str());
@@ -188,12 +205,12 @@ void GDBServer::send_packet(const std::string& packet) {
     snprintf(checksum_str, sizeof(checksum_str), "%02x", checksum);
     response += checksum_str;
 
-    write(client_fd, response.c_str(), response.length());
+    SOCKET_WRITE(client_fd, response.c_str(), response.length());
 
     if (!noack_mode) {
         // Wait for acknowledgment
         char ack;
-        read(client_fd, &ack, 1);
+        SOCKET_READ(client_fd, &ack, 1);
     }
 }
 

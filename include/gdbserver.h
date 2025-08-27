@@ -4,11 +4,27 @@
 #include <cstring>
 #include <sstream>
 #include <iomanip>
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+typedef SOCKET socket_t;
+#define CLOSESOCKET closesocket
+#define INVALID_SOCKET_FD INVALID_SOCKET
+#define SOCKET_READ(s,b,l) recv(s,b,l,0)
+#define SOCKET_WRITE(s,b,l) send(s,b,l,0)
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
+typedef int socket_t;
+#define CLOSESOCKET close
+#define INVALID_SOCKET_FD -1
+#define SOCKET_READ(s,b,l) read(s,b,l)
+#define SOCKET_WRITE(s,b,l) write(s,b,l)
+#endif
 #include "debug.h"
 
 
@@ -17,17 +33,17 @@ static inline uint16_t swap16(uint16_t x);
 
 class GDBServer {
 public:
-    GDBServer(int port) : port(port), server_fd(-1), client_fd(-1) {}
+    GDBServer(int port) : port(port), server_fd(INVALID_SOCKET_FD), client_fd(INVALID_SOCKET_FD) {}
     ~GDBServer() {
-        if (client_fd != -1) close(client_fd);
-        if (server_fd != -1) close(server_fd);
+        if (client_fd != INVALID_SOCKET_FD) CLOSESOCKET(client_fd);
+        if (server_fd != INVALID_SOCKET_FD) CLOSESOCKET(server_fd);
     }
     void run();
     void signal_breakpoint();
 
 private:
     int port;
-    int server_fd, client_fd;
+    socket_t server_fd, client_fd;
     bool noack_mode = false;
     bool processing = false;
 
