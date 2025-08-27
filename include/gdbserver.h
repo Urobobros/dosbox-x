@@ -1,14 +1,17 @@
 #ifndef DOSBOX_GDBSERVER_H
 #define DOSBOX_GDBSERVER_H
 
-#include "dosbox.h"
 #include <cstdint>
 #include <string>
 #include <vector>
 #include <cstring>
 #include <sstream>
 #include <iomanip>
+
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -29,6 +32,8 @@ typedef int socket_t;
 #define SOCKET_READ(s,b,l) read(s,b,l)
 #define SOCKET_WRITE(s,b,l) write(s,b,l)
 #endif
+
+#include "dosbox.h"
 #include "debug.h"
 
 static inline uint32_t swap32(uint32_t x);

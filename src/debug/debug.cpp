@@ -17,7 +17,7 @@
  */
 
 
-#include "dosbox.h"
+#include "gdbserver.h"
 #if C_DEBUG
 
 #include "../../tests/tests.h"
@@ -34,7 +34,6 @@
 using namespace std;
 
 #include "debug.h"
-#include "gdbserver.h"
 #include "cross.h" //snprintf
 #include "fpu.h"
 #include "bios.h"
