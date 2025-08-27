@@ -34,6 +34,7 @@
 using namespace std;
 
 #include "debug.h"
+#include "gdbserver.h"
 #include "cross.h" //snprintf
 #include "fpu.h"
 #include "bios.h"
@@ -44,7 +45,6 @@ using namespace std;
 #include "mapper.h"
 #include "pc98_gdc.h"
 #include "callback.h"
-#include "gdbserver.h"
 #include "inout.h"
 #include "paging.h"
 #include "shell.h"

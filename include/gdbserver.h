@@ -1,4 +1,8 @@
+#ifndef DOSBOX_GDBSERVER_H
+#define DOSBOX_GDBSERVER_H
+
 #include "dosbox.h"
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <cstring>
@@ -26,7 +30,6 @@ typedef int socket_t;
 #define SOCKET_WRITE(s,b,l) write(s,b,l)
 #endif
 #include "debug.h"
-
 
 static inline uint32_t swap32(uint32_t x);
 static inline uint16_t swap16(uint16_t x);
@@ -72,4 +75,6 @@ private:
     std::string hex_decode(const std::string& input);
     uint8_t hex_to_int(char c);
 };
+
+#endif // DOSBOX_GDBSERVER_H
 
