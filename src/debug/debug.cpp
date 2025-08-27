@@ -1213,61 +1213,6 @@ static void DrawRegisters(void) {
 	wrefresh(dbg.win_reg);
 }
 
-static void DrawAll(void) {
-    if (dbg.win_main == NULL || dbg.win_all == NULL)
-        return;
-
-    werase(dbg.win_all);
-
-    int maxy, maxx;
-    getmaxyx(dbg.win_all, maxy, maxx);
-    int y = 0, h = 0, w = 0;
-
-    if (dbg.win_reg) {
-        getmaxyx(dbg.win_reg, h, w);
-        if (h > maxy)
-            h = maxy;
-        if (w > maxx)
-            w = maxx;
-        copywin(dbg.win_reg, dbg.win_all, 0, 0, y, 0, y + h - 1,
-                w - 1, false);
-        y += h;
-    }
-
-    if (dbg.win_data && y < maxy) {
-        getmaxyx(dbg.win_data, h, w);
-        if (h > (maxy - y))
-            h = maxy - y;
-        if (w > maxx)
-            w = maxx;
-        copywin(dbg.win_data, dbg.win_all, 0, 0, y, 0, y + h - 1,
-                w - 1, false);
-        y += h;
-    }
-
-    if (dbg.win_code && y < maxy) {
-        getmaxyx(dbg.win_code, h, w);
-        if (h > (maxy - y))
-            h = maxy - y;
-        if (w > maxx)
-            w = maxx;
-        copywin(dbg.win_code, dbg.win_all, 0, 0, y, 0, y + h - 1,
-                w - 1, false);
-        y += h;
-    }
-
-    if (dbg.win_out && y < maxy) {
-        getmaxyx(dbg.win_out, h, w);
-        if (h > (maxy - y))
-            h = maxy - y;
-        if (w > maxx)
-            w = maxx;
-        copywin(dbg.win_out, dbg.win_all, 0, 0, y, 0, y + h - 1,
-                w - 1, false);
-    }
-
-    wrefresh(dbg.win_all);
-}
 
 bool DEBUG_IsPagingOutput(void);
 
@@ -4677,7 +4622,6 @@ void DEBUG_DrawScreen(void) {
         DrawCode();
     DrawInput();
         DrawRegisters();
-        DrawAll();
 }
 
 static void DEBUG_RaiseTimerIrq(void) {

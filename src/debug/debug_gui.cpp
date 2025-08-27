@@ -84,7 +84,6 @@ const unsigned int dbg_def_win_height[DBGBlock::WINI_MAX_INDEX] = {
     7,          /* WINI_REG */
     9,          /* WINI_DATA */
     12,         /* WINI_CODE */
-    5,          /* WINI_ALL */
     6           /* WINI_OUT */
 };
 
@@ -92,7 +91,6 @@ const char *dbg_def_win_titles[DBGBlock::WINI_MAX_INDEX] = {
     "Register Overview",        /* WINI_REG */
     "Data view (segmented)",    /* WINI_DATA */
     "Code Overview",            /* WINI_CODE */
-    "All-in-one",               /* WINI_ALL */
     "Output"                    /* WINI_OUT */
 };
 
@@ -100,7 +98,6 @@ const char *dbg_win_names[DBGBlock::WINI_MAX_INDEX] = {
     "REG",
     "DATA",
     "CODE",
-    "ALL",
     "OUT"
 };
 
@@ -178,7 +175,6 @@ WINDOW* &DBGBlock::get_win_ref(int idx) {
         case WINI_REG:  return win_reg;
         case WINI_DATA: return win_data;
         case WINI_CODE: return win_code;
-        case WINI_ALL:  return win_all;
         case WINI_OUT:  return win_out;
     }
 
