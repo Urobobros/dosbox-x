@@ -168,7 +168,6 @@ static void LogFNKEY(void);
 static void LogPages(char* selname);
 static void LogCPUInfo(void);
 static void OutputVecTable(char* filename);
-static void DrawVariables(void);
 static void LogDOSKernMem(void);
 static void LogBIOSMem(void);
 
@@ -958,15 +957,11 @@ static bool StepOver()
 
 bool DEBUG_ExitLoop(void)
 {
-#if C_HEAVY_DEBUG
-	DrawVariables();
-#endif
-
-	if (exitLoop.load()) {
-		exitLoop.store(false);
-		return true;
-	}
-	return false;
+        if (exitLoop.load()) {
+                exitLoop.store(false);
+                return true;
+        }
+        return false;
 }
 
 /********************/
@@ -4626,7 +4621,6 @@ void DEBUG_DrawScreen(void) {
 	DrawCode();
     DrawInput();
 	DrawRegisters();
-	DrawVariables();
 }
 
 static void DEBUG_RaiseTimerIrq(void) {
@@ -5501,51 +5495,6 @@ static void OutputVecTable(char* filename) {
 	DEBUG_ShowMsg("DEBUG: Interrupt vector table written to %s.\n", filename);
 }
 
-#define DEBUG_VAR_BUF_LEN 16
-static void DrawVariables(void) {
-	if (CDebugVar::varList.empty()) return;
-
-	char buffer[DEBUG_VAR_BUF_LEN];
-	std::vector<CDebugVar*>::size_type s = CDebugVar::varList.size();
-	bool windowchanges = false;
-
-	for(std::vector<CDebugVar*>::size_type i = 0; i != s; i++) {
-
-		if (i == 4*3) {
-			/* too many variables */
-			break;
-		}
-
-		CDebugVar *dv = CDebugVar::varList[i];
-		uint16_t value;
-		bool varchanges = false;
-		bool has_no_value = mem_readw_checked(dv->GetAdr(),&value);
-		if (has_no_value) {
-			snprintf(buffer,DEBUG_VAR_BUF_LEN, "%s", "??????");
-			dv->SetValue(false,0);
-			varchanges = true;
-		} else {
-			if ( dv->HasValue() && dv->GetValue() == value) {
-				//It already had a value and it didn't change (most likely case)
-			} else {
-				dv->SetValue(true,value);
-				snprintf(buffer,DEBUG_VAR_BUF_LEN, "0x%04x", value);
-				varchanges = true;
-			}
-		}
-
-		if (varchanges) {
-			unsigned int y = (unsigned int)(i / 3u);
-			unsigned int x = (i % 3u) * 26u;
-			mvwprintw(dbg.win_var, (int)y,  (int)x, "%s", dv->GetName());
-			mvwprintw(dbg.win_var, (int)y, ((int)x + DEBUG_VAR_BUF_LEN + 1), "%s", buffer);
-			windowchanges = true; //Something has changed in this window
-		}
-	}
-
-	if (windowchanges) wrefresh(dbg.win_var);
-}
-#undef DEBUG_VAR_BUF_LEN
 // HEAVY DEBUGGING STUFF
 
 #if C_HEAVY_DEBUG
