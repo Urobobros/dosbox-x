@@ -31,6 +31,7 @@
 #include <string>
 #include <sstream>
 #include <thread>
+#include <atomic>
 using namespace std;
 
 #include "debug.h"
@@ -285,8 +286,8 @@ public:
 
 class DEBUG;
 
-//DEBUG*	pDebugcom	= 0;
-bool	exitLoop	= false;
+//DEBUG*        pDebugcom       = 0;
+std::atomic<bool> exitLoop{false};
 
 
 // Heavy Debugging Vars for logging
@@ -931,7 +932,7 @@ bool DEBUG_IntBreakpoint(uint8_t intNum)
 
 static bool StepOver()
 {
-	exitLoop = false;
+	exitLoop.store(false);
 	PhysPt start=(PhysPt)GetAddress(SegValue(cs),reg_eip);
 	char dline[200];Bitu size;
 	size=DasmI386(dline, start, reg_eip, cpu.code.big);
@@ -961,8 +962,8 @@ bool DEBUG_ExitLoop(void)
 	DrawVariables();
 #endif
 
-	if (exitLoop) {
-		exitLoop = false;
+	if (exitLoop.load()) {
+		exitLoop.store(false);
 		return true;
 	}
 	return false;
@@ -4321,7 +4322,7 @@ uint32_t DEBUG_CheckKeys(int key) {
 				/* FALLTHROUGH */
 		case KEY_F(11):	// trace into
 				DrawRegistersUpdateOld();
-				exitLoop = false;
+				exitLoop.store(false);
 				mustCompleteInstruction = true;
 				ret = DEBUG_Run(1,true);
 				mustCompleteInstruction = false;
@@ -4392,7 +4393,7 @@ uint32_t DEBUG_CheckKeys(int key) {
 			else
 				ret = (Bits)(*CallBack_Handlers[ret])();
 			if (ret) {
-				exitLoop=true;
+				exitLoop.store(true);
 				CPU_Cycles=CPU_CycleLeft=0;
 				return (uint32_t)ret;
 			}
@@ -5244,7 +5245,7 @@ void DEBUG_CheckExecuteBreakpoint(uint16_t seg, uint32_t off)
 
 Bitu DEBUG_EnableDebugger(void)
 {
-	exitLoop = true;
+	exitLoop.store(true);
 
 	if (!debugging || (debugging && debug_running))
 		DEBUG_Enable_Handler(true);
@@ -5788,7 +5789,7 @@ void DEBUG_Continue() {
     return;
 
 
-    exitLoop = false;
+    exitLoop.store(false);
     debugging = false;
     CBreakpoint::ActivateBreakpoints();
     DOSBOX_SetNormalLoop();
