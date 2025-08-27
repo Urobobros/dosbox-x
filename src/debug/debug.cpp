@@ -5817,7 +5817,7 @@ void DEBUG_InitGDBStub(int port) {
     gdbServer = new GDBServer(port);
 
     // Run the GDB server in a separate thread
-    std::thread gdbThread([gdbServer]() {
+    std::thread gdbThread([]() {
         gdbServer->run();
     });
 
