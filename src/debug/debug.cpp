@@ -1213,6 +1213,13 @@ static void DrawRegisters(void) {
 	wrefresh(dbg.win_reg);
 }
 
+static void DrawAll(void) {
+    if (dbg.win_main == NULL || dbg.win_all == NULL)
+        return;
+    werase(dbg.win_all);
+    mvwprintw(dbg.win_all, 0, 0, "All-in-one view not implemented");
+}
+
 bool DEBUG_IsPagingOutput(void);
 
 static void DrawInput(void) {
@@ -4617,10 +4624,11 @@ void DEBUG_Enable_Handler(bool pressed) {
 }
 
 void DEBUG_DrawScreen(void) {
-	DrawData();
-	DrawCode();
+        DrawData();
+        DrawCode();
     DrawInput();
-	DrawRegisters();
+        DrawRegisters();
+        DrawAll();
 }
 
 static void DEBUG_RaiseTimerIrq(void) {
