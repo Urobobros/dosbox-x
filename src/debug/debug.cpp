@@ -25,6 +25,7 @@
 #include <string.h>
 #include <list>
 #include <vector>
+#include <deque>
 #include <ctype.h>
 #include <fstream>
 #include <iomanip>
@@ -310,6 +311,7 @@ static char curSelectorName[3] = { 0,0,0 };
 static Segment oldsegs[6];
 static Bitu oldflags,oldcpucpl;
 DBGBlock dbg;
+std::deque<std::string> bp_hits;
 extern Bitu cycle_count;
 static bool debugging = false;
 static bool debug_running = false;
@@ -319,11 +321,21 @@ static FPU_rec oldfpu;
 
 void VGA_DebugRedraw(void);
 
+void Draw_BreakpointHits(void);
+
 void VGA_DebugOverrideStart(uint32_t ofs,bool sum);
 void VGA_ResetDebugOverrides(void);
 
 bool IsDebuggerActive(void) {
     return debugging;
+}
+
+void DEBUG_LogBreakpoint(uint32_t seg, uint32_t ofs) {
+    char buf[32];
+    safe_sprintf(buf, "%04X:%04X", (unsigned int)(seg & 0xFFFF), (unsigned int)(ofs & 0xFFFF));
+    bp_hits.emplace_back(buf);
+    if (bp_hits.size() > 50) bp_hits.pop_front();
+    Draw_BreakpointHits();
 }
 
 bool IsDebuggerRunwatch(void) {
@@ -4593,6 +4605,7 @@ void DEBUG_Enable_Handler(bool pressed) {
 
     if (!debugging) {
         printf("Breakpoint hit! Entering debugger.\n");
+        DEBUG_LogBreakpoint(SegValue(cs), reg_eip);
         gdbServer->signal_breakpoint();
     }
 

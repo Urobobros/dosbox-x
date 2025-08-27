@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <fstream>
+#include <deque>
 
 #if defined(WIN32)
 #include <conio.h>
@@ -84,21 +85,24 @@ const unsigned int dbg_def_win_height[DBGBlock::WINI_MAX_INDEX] = {
     7,          /* WINI_REG */
     9,          /* WINI_DATA */
     12,         /* WINI_CODE */
-    6           /* WINI_OUT */
+    6,          /* WINI_OUT */
+    7           /* WINI_BP */
 };
 
 const char *dbg_def_win_titles[DBGBlock::WINI_MAX_INDEX] = {
     "Register Overview",        /* WINI_REG */
     "Data view (segmented)",    /* WINI_DATA */
     "Code Overview",            /* WINI_CODE */
-    "Output"                    /* WINI_OUT */
+    "Output",                   /* WINI_OUT */
+    "Breakpoints Hit"           /* WINI_BP */
 };
 
 const char *dbg_win_names[DBGBlock::WINI_MAX_INDEX] = {
     "REG",
     "DATA",
     "CODE",
-    "OUT"
+    "OUT",
+    "BRK"
 };
 
 #define MAX_LOG_BUFFER 4000
@@ -106,6 +110,18 @@ static list<string> logBuff;
 static list<string>::iterator logBuffPos = logBuff.end();
 
 extern int old_cursor_state;
+extern std::deque<std::string> bp_hits;
+
+void Draw_BreakpointHits(void) {
+    if (dbg.win_bp == NULL) return;
+    int maxy, maxx; getmaxyx(dbg.win_bp, maxy, maxx);
+    werase(dbg.win_bp);
+    int y = 0;
+    for (auto it = bp_hits.rbegin(); it != bp_hits.rend() && y < maxy; ++it) {
+        mvwprintw(dbg.win_bp, y++, 0, "%s", it->c_str());
+    }
+    wrefresh(dbg.win_bp);
+}
 
 static void BlitAllWindow(void) {
     if (dbg.win_all && dbg.win_main) {
@@ -184,6 +200,7 @@ WINDOW* &DBGBlock::get_win_ref(int idx) {
         case WINI_DATA: return win_data;
         case WINI_CODE: return win_code;
         case WINI_OUT:  return win_out;
+        case WINI_BP:   return win_bp;
     }
 
     throw domain_error("get_win_ref");
@@ -550,6 +567,7 @@ static void MakeSubWindows(void) {
 
     DrawBars();
     Draw_RegisterLayout();
+    Draw_BreakpointHits();
     refresh();
     BlitAllWindow();
 }
