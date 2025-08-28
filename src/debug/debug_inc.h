@@ -50,8 +50,8 @@ public:
         WINI_REG,
         WINI_DATA,
         WINI_CODE,
-        WINI_VAR,
         WINI_OUT,
+        WINI_BP,
         /* inp not counted */
 
         WINI_MAX_INDEX
@@ -61,12 +61,11 @@ public:
     unsigned char win_order[WINI_MAX_INDEX] = {};
     unsigned int win_height[WINI_MAX_INDEX] = {};
 public:
-	DBGBlock() : win_main(NULL), win_reg(NULL), win_data(NULL), win_code(NULL),
-		win_var(NULL), win_out(NULL), win_inp(NULL), active_win(WINI_CODE), input_y(0), global_mask(0), data_view(0xFF) {
+        DBGBlock() : win_main(NULL), win_reg(NULL), win_data(NULL), win_code(NULL), win_out(NULL), win_bp(NULL), win_all(NULL), win_inp(NULL), active_win(WINI_CODE), input_y(0), global_mask(0), data_view(DATV_SEGMENTED) {
         for (unsigned int i=0;i < WINI_MAX_INDEX;i++) {
             win_height[i] = dbg_def_win_height[i];
             win_title[i] = dbg_def_win_titles[i];
-            win_vis[i] = (i != WINI_VAR);
+            win_vis[i] = true;
             win_order[i] = i;
         }
     }
@@ -76,8 +75,9 @@ public:
 	WINDOW * win_reg;					/* Register Window */
 	WINDOW * win_data;					/* Data Output window */
 	WINDOW * win_code;					/* Disassembly/Debug point Window */
-	WINDOW * win_var;					/* Variable Window */
-	WINDOW * win_out;					/* Text Output Window */
+        WINDOW * win_out;					/* Text Output Window */
+        WINDOW * win_bp;                                        /* Breakpoint log window */
+        WINDOW * win_all;                                       /* Combined view window */
 
     WINDOW * win_inp;                   /* Input window (not counted in tab enumeration) */
 

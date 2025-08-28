@@ -9259,6 +9259,12 @@ int main(int argc, char* argv[]) SDL_MAIN_NOEXCEPT {
 #endif
             ,MMOD2,"debugger","Show debugger",&item);
             item->set_text("Start DOSBox-X Debugger");
+#if !defined(MACOSX)
+            /* Alternative shortcut: Alt+P to open the debugger */
+            MAPPER_AddHandler(DEBUG_Enable_Handler, MK_p, MMOD2,
+                               "debugger_altp",
+                               "Start DOSBox-X Debugger (Alt+P)");
+#endif
 
 #if defined(MACOSX) || defined(LINUX)
             /* Mac OS X does not have a console for us to just allocate on a whim like Windows does.

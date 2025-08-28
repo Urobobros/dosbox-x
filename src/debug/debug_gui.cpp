@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <fstream>
+#include <deque>
 
 #if defined(WIN32)
 #include <conio.h>
@@ -84,24 +85,24 @@ const unsigned int dbg_def_win_height[DBGBlock::WINI_MAX_INDEX] = {
     7,          /* WINI_REG */
     9,          /* WINI_DATA */
     12,         /* WINI_CODE */
-    5,          /* WINI_VAR */
-    6           /* WINI_OUT */
+    6,          /* WINI_OUT */
+    7           /* WINI_BP */
 };
 
 const char *dbg_def_win_titles[DBGBlock::WINI_MAX_INDEX] = {
     "Register Overview",        /* WINI_REG */
-    "Data Overview",            /* WINI_DATA */
+    "Data view (segmented)",    /* WINI_DATA */
     "Code Overview",            /* WINI_CODE */
-    "Variable Overview",        /* WINI_VAR */
-    "Output"                    /* WINI_OUT */
+    "Output",                   /* WINI_OUT */
+    "Breakpoints Hit"           /* WINI_BP */
 };
 
 const char *dbg_win_names[DBGBlock::WINI_MAX_INDEX] = {
     "REG",
     "DATA",
     "CODE",
-    "VAR",
-    "OUT"
+    "OUT",
+    "BRK"
 };
 
 #define MAX_LOG_BUFFER 4000
@@ -109,6 +110,26 @@ static list<string> logBuff;
 static list<string>::iterator logBuffPos = logBuff.end();
 
 extern int old_cursor_state;
+extern std::deque<std::string> bp_hits;
+
+void Draw_BreakpointHits(void) {
+    if (dbg.win_bp == NULL) return;
+    int maxy, maxx; getmaxyx(dbg.win_bp, maxy, maxx);
+    werase(dbg.win_bp);
+    int y = 0;
+    for (auto it = bp_hits.rbegin(); it != bp_hits.rend() && y < maxy; ++it) {
+        mvwprintw(dbg.win_bp, y++, 0, "%s", it->c_str());
+    }
+    wrefresh(dbg.win_bp);
+}
+
+static void BlitAllWindow(void) {
+    if (dbg.win_all && dbg.win_main) {
+        int maxy,maxx; getmaxyx(dbg.win_main,maxy,maxx);
+        copywin(dbg.win_main, dbg.win_all, 0,0,0,0,maxy-1,maxx-1,0);
+        wrefresh(dbg.win_all);
+    }
+}
 
 void getlogtext(std::string &str) {
     str = "";
@@ -178,8 +199,8 @@ WINDOW* &DBGBlock::get_win_ref(int idx) {
         case WINI_REG:  return win_reg;
         case WINI_DATA: return win_data;
         case WINI_CODE: return win_code;
-        case WINI_VAR:  return win_var;
         case WINI_OUT:  return win_out;
+        case WINI_BP:   return win_bp;
     }
 
     throw domain_error("get_win_ref");
@@ -341,7 +362,8 @@ void DEBUG_RefreshPage(char scroll) {
         }
     }
 
-	wrefresh(dbg.win_out);
+    wrefresh(dbg.win_out);
+    BlitAllWindow();
 }
 
 void DEBUG_ScrollHomeOutput(void) {
@@ -445,6 +467,11 @@ static void DestroySubWindows(void) {
             ref = NULL;
         }
     }
+
+    if (dbg.win_all) {
+        delwin(dbg.win_all);
+        dbg.win_all = NULL;
+    }
 }
 
 void DEBUG_GUI_DestroySubWindows(void) {
@@ -535,9 +562,14 @@ static void MakeSubWindows(void) {
         outy += height;
     }
 
-	DrawBars();
-	Draw_RegisterLayout();
-	refresh();
+    if (!dbg.win_all)
+        dbg.win_all = newwin(win_main_maxy, win_main_maxx, 0, 0);
+
+    DrawBars();
+    Draw_RegisterLayout();
+    Draw_BreakpointHits();
+    refresh();
+    BlitAllWindow();
 }
 
 void DEBUG_GUI_Rebuild(void) {
